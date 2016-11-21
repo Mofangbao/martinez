@@ -16,6 +16,9 @@ var compareSegments = require('./compare_segments');
 var intersection    = require('./segment_intersection');
 var equals          = require('./equals');
 
+console.log(require('binary-trees'));
+Tree = require('binary-trees').BST;
+
 var max = Math.max;
 var min = Math.min;
 
@@ -294,7 +297,8 @@ function _renderSweepLine(sweepLine, pos, event) {
     map.removeLayer(p);
   });
   window.sws = [];
-  sweepLine.each(function(e) {
+  sweepLine.forEach(function(e) {
+    e = e.key;
     var poly = L.polyline([e.point.slice().reverse(), e.otherEvent.point.slice().reverse()], { color: 'green' }).addTo(map);
     window.sws.push(poly);
   });
@@ -330,75 +334,62 @@ function subdivideSegments(eventQueue, subject, clipping, sbbox, cbbox, operatio
     }
 
     if (event.left) {
-      sweepLine.insert(event);
+      next = prev = sweepLine.insert(event);
       // _renderSweepLine(sweepLine, event.point, event);
 
-      next = sweepLine.findIter(event);
-      prev = sweepLine.findIter(event);
-      event.iterator = sweepLine.findIter(event);
-
+      //next = sweepLine.findIter(event);
+      //prev = sweepLine.findIter(event);
+      // event.iterator = sweepLine.findIter(event);
       // Cannot get out of the tree what we just put there
-      if (!prev || !next) {
-        console.log('brute');
-        var iterators = findIterBrute(sweepLine);
-        prev = iterators[0];
-        next = iterators[1];
-      }
+      // if (!prev || !next) {
+      //   console.log('brute');
+      //   var iterators = findIterBrute(sweepLine);
+      //   prev = iterators[0];
+      //   next = iterators[1];
+      // }
 
-      if (prev.data() !== sweepLine.min()) {
-        prev.prev();
-      } else {
-        prev = sweepLine.iterator(); //findIter(sweepLine.max());
-        prev.prev();
-        prev.next();
-      }
-      next.next();
+      prev = (prev !== sweepLine.min()) ?
+        sweepLine.prev(prev) : sweepLine.max();
+      next = sweepLine.next(next);
 
-      computeFields(event, prev.data(), sweepLine, operation);
+      console.log(event, prev, next, sweepLine);
 
-      if (next.data()) {
-        if (possibleIntersection(event, next.data(), eventQueue) === 2) {
-          computeFields(event, prev.data(), sweepLine, operation);
-          computeFields(event, next.data(), sweepLine, operation);
+      computeFields(event, prev.key, sweepLine, operation);
+
+      if (next) {
+        if (possibleIntersection(event, next.key, eventQueue) === 2) {
+          computeFields(event, prev.key, sweepLine, operation);
+          computeFields(event, next.key, sweepLine, operation);
         }
       }
 
-      if (prev.data()) {
-        if (possibleIntersection(prev.data(), event, eventQueue) === 2) {
-          var prevprev = sweepLine.findIter(prev.data());
-          if (prevprev.data() !== sweepLine.min()) {
-            prevprev.prev();
-          } else {
-            prevprev = sweepLine.findIter(sweepLine.max());
-            prevprev.next();
-          }
-          computeFields(prev.data(), prevprev.data(), sweepLine, operation);
-          computeFields(event, prev.data(), sweepLine, operation);
+      if (prev) {
+        if (possibleIntersection(prev.key, event, eventQueue) === 2) {
+          var prevprev = prev;
+          prevprev = (prevprev !== sweepLine.min()) ?
+            sweepLine.prev(prevprev) : sweepLine.max();
+          computeFields(prev.key, prevprev.key, sweepLine, operation);
+          computeFields(event, prev.key, sweepLine, operation);
         }
       }
     } else {
       event = event.otherEvent;
-      next = sweepLine.findIter(event);
-      prev = sweepLine.findIter(event);
+      next  = prev = sweepLine.find(event);
 
       // _renderSweepLine(sweepLine, event.otherEvent.point, event);
 
-      if (!(prev && next)) continue;
+      //if (!(prev && next)) continue;
 
-      if (prev.data() !== sweepLine.min()) {
-        prev.prev();
-      } else {
-        prev = sweepLine.iterator();
-        prev.prev(); // sweepLine.findIter(sweepLine.max());
-        prev.next();
-      }
-      next.next();
+      prev = (prev !== sweepLine.min()) ?
+        sweepLine.prev(prev) : sweepLine.max();
+      next = sweepLine.next(next);
+
       sweepLine.remove(event);
 
       //_renderSweepLine(sweepLine, event.otherEvent.point, event);
 
-      if (next.data() && prev.data()) {
-        possibleIntersection(prev.data(), next.data(), eventQueue);
+      if (next && prev) {
+        possibleIntersection(prev.key, next.key, eventQueue);
       }
     }
   }
